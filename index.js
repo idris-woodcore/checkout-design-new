@@ -755,11 +755,10 @@ function Pooler(config) {
     timerText.style.textAlign = "center";
     timerText.style.fontFamily =
       '"GraphikMedium", "Source Sans Pro", sans-serif';
-    // timerText.textContent = `Expires in 30:00`;
+    timerText.textContent = `Expires in 30:00`;
 
     // // countdown time
-    // var duration = 1799;
-    var duration = 100;
+    var duration = 1799;
     var countdown = "";
     var timer = setInterval(function () {
       var minutes = Math.floor(duration / 60);
