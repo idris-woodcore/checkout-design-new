@@ -305,11 +305,14 @@ function Pooler(config) {
           pusherSignSubscribe.unsubscribe(PUSHER_SIGN_CHANNEL_KEY);
           pusherSignSubscribe.unbind();
         };
+        const fetchData = () => {
+          fetch(`${BASE_URL}/initialize`, { method: "GET", signal });
+        };
+        const fetchDataInterval = setInterval(() => {
+          fetchData();
+        }, 3000);
 
         function getSignature(callback) {
-          fetch(`${BASE_URL}/initialize`, { method: "GET", signal })
-            .then()
-            .catch();
           pusherSignSubscribe.bind("data", function (data) {
             if (data?.data?.signature) {
               callback(data?.data?.signature);
@@ -358,6 +361,8 @@ function Pooler(config) {
 
             pusherPaymentSubscribe.bind("data", (data) => {
               if (data?.data?.status === "01") {
+                clearInterval(fetchDataInterval);
+                clearInterval(initiatePaymentInterval);
                 showMerchantModalOnce({
                   data: data?.data?.data,
                   merchantConfig: config,
@@ -373,6 +378,8 @@ function Pooler(config) {
                 iframe.style.display = "none";
                 controller.abort();
               } else {
+                clearInterval(fetchDataInterval);
+                clearInterval(initiatePaymentInterval);
                 onError(config);
                 // onFailure(config);
                 handleEffect();
@@ -389,7 +396,9 @@ function Pooler(config) {
             });
           }
 
-          initialisePayment();
+          const initiatePaymentInterval = setInterval(() => {
+            initialisePayment();
+          }, 4000);
         });
       };
 
@@ -414,9 +423,6 @@ function Pooler(config) {
         }
       }
     }
-    fetch(`${BASE_URL}/initialize`, { method: "GET", signal })
-      .then(() => {})
-      .catch();
   }
 
   // shows merchant details modal
@@ -928,7 +934,7 @@ function Pooler(config) {
       if (status === true) {
         showAwaitingModal(global);
         handleEffect();
-        merchantIframe.parentNode.removeChild(merchantIframe);
+        // merchantIframe.parentNode.removeChild(merchantIframe);
         merchantIframe.style.display = "none";
         Merchantmodal.style.display = "none";
         var childNodes = document.body.childNodes;
@@ -1950,6 +1956,7 @@ function Pooler(config) {
     // spins up session expiration iframe
     const controller = new AbortController();
     const signal = controller.signal;
+    const sessionData = data;
 
     var sessionIframe = document.createElement("iframe");
     sessionIframe.id = "session-iframe";
@@ -2298,8 +2305,9 @@ function Pooler(config) {
       // generate new disposable account
       const script = document.createElement("script");
       script.src = "https://js.pusher.com/8.2.0/pusher.min.js";
-      script.async = true;
+      script.defer = true;
       script.onload = function () {
+        console.log("script call");
         const BASE_URL = "https://websocket.inside.poolerapp.com";
         const PUSHER_SIGN_APP_KEY = "f5715eb30d0b1b069d22";
         const PUSHER_SIGN_CHANNEL_KEY = "signature_dev";
@@ -2318,14 +2326,20 @@ function Pooler(config) {
           pusherSignSubscribe.unbind();
         };
 
-        function getSignature(callback) {
+        const fetchData = () => {
           fetch(`${BASE_URL}/initialize`, { method: "GET", signal })
             .then()
             .catch();
+        };
+
+        const fetchDataInterval = setInterval(() => {
+          fetchData();
+        }, 3000);
+
+        function getSignature(callback) {
           pusherSignSubscribe.bind("data", function (data) {
             if (data?.data?.signature) {
               callback(data?.data?.signature);
-              removeSubscription();
             }
           });
         }
@@ -2334,9 +2348,9 @@ function Pooler(config) {
             var reqObject = {
               action: "initialize",
               signature: signature,
-              email: config?.email,
-              amount: config?.amount,
-              pub_key: config?.pub_key,
+              email: sessionData?.merchantConfig?.email,
+              amount: sessionData?.merchantConfig?.amount,
+              pub_key: sessionData?.merchantConfig?.pub_key,
               // payment_link_reference: config?.reference,
             };
 
@@ -2367,8 +2381,11 @@ function Pooler(config) {
               };
             }
             const showMerchantModalOnce = executeOnce(showMerchantModal);
+
             pusherPaymentSubscribe.bind("data", (data) => {
-              if (data?.data?.status === "01") {
+              if (data?.status === true) {
+                clearInterval(fetchDataInterval);
+                clearInterval(initiatePaymentInterval);
                 showMerchantModalOnce({
                   data: data?.data?.data,
                   merchantConfig: config,
@@ -2380,6 +2397,8 @@ function Pooler(config) {
                 pusherPaymentSubscribe.unsubscribe(PUSHER_PAYMENT_CHANNEL_KEY);
                 pusherPaymentSubscribe.unbind();
               } else {
+                clearInterval(fetchDataInterval);
+                clearInterval(initiatePaymentInterval);
                 onError(config);
                 removeSubscription();
                 pusherPaymentSubscribe.unsubscribe(PUSHER_PAYMENT_CHANNEL_KEY);
@@ -2390,7 +2409,9 @@ function Pooler(config) {
               }
             });
           }
-          initialisePayment();
+          const initiatePaymentInterval = setInterval(() => {
+            initialisePayment();
+          }, 4000);
         });
       };
       document.head.appendChild(script);
@@ -2933,12 +2954,6 @@ function Pooler(config) {
       }
     });
   }
-
-  // ON SUCCESS CALLBACK
-  function onSuccess(data) {}
-
-  // ON COMPLETE CALLBACK
-  function onComplete(data) {}
 
   // ON ERROR
   function onError(data) {
