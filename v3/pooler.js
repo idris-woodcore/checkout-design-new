@@ -952,7 +952,6 @@ function Pooler(config) {
   function showAwaitingModal(data) {
     // spin up an iframe for awaiting modal
     const modalProps = data;
-    console.log(modalProps, "llo");
     var awaitingIframe = document.createElement("iframe");
     awaitingIframe.id = "awaiting-iframe";
     awaitingIframe.style.position = "fixed";
@@ -1450,6 +1449,60 @@ function Pooler(config) {
     awaitingIframe.addEventListener("load", handleIframeLoad);
     document.body.appendChild(awaitingIframe);
 
+    function handleDisplay() {
+      const status = modalProps?.collection_data?.status;
+      const completed = modalProps?.collection_data?.data?.completed;
+      if (status === "01" && completed === true) {
+        clearTimeout(displayTimeout);
+        successModal({
+          ...modalProps,
+        });
+        awaitingIframe.removeEventListener("load", handleIframeLoad);
+        awaitingIframe.style.display = "none";
+        Awaitingmodal.style.display = "none";
+        var childNodes = document.body.childNodes;
+        var desiredChild = null;
+        for (var i = 0; i < childNodes.length; i++) {
+          if (
+            childNodes[i].id === "pooler-iframe" ||
+            childNodes[i].id === "merchant-iframe"
+          ) {
+            desiredChild = childNodes[i];
+            break;
+          }
+        }
+        if (desiredChild) {
+          var parent = desiredChild.parentNode;
+          parent.removeChild(desiredChild);
+        }
+      } else {
+        clearTimeout(displayTimeout);
+        onFailure({ ...modalProps });
+        awaitingIframe.removeEventListener("load", handleIframeLoad);
+        awaitingIframe.style.display = "none";
+        Awaitingmodal.style.display = "none";
+        var childNodes = document.body.childNodes;
+        var desiredChild = null;
+        for (var i = 0; i < childNodes.length; i++) {
+          if (
+            childNodes[i].id === "pooler-iframe" ||
+            childNodes[i].id === "merchant-iframe"
+          ) {
+            desiredChild = childNodes[i];
+            break;
+          }
+        }
+        if (desiredChild) {
+          var parent = desiredChild.parentNode;
+          parent.removeChild(desiredChild);
+        }
+      }
+    }
+
+    const displayTimeout = setTimeout(() => {
+      handleDisplay();
+    }, 5000);
+
     // CHECK AWAITING RE-RENDER
     var awaitingRemove = "awaiting-iframe";
     var awaitingWithId = document.querySelectorAll(
@@ -1621,7 +1674,9 @@ function Pooler(config) {
     modalAmount.style.fontSize = "1.125rem";
     modalAmount.style.paddingBottom = "8px";
     // modalAmount.textContent = `NGN${data?.amount}`;
-    modalAmount.textContent = `${data?.currency_code || "NGN"}${data?.amount}`;
+    modalAmount.textContent = `${data?.data?.currency_code || "NGN"}${
+      data?.data?.amount || ""
+    }`;
     modalAmountEmail.appendChild(modalAmount);
 
     // email
@@ -1632,7 +1687,7 @@ function Pooler(config) {
     modalEmail.style.color = "#8f9bb2";
     modalEmail.style.fontStyle = "normal";
     modalEmail.style.fontSize = "1rem";
-    modalEmail.textContent = `${data?.email}`;
+    modalEmail.textContent = `${data?.data?.email || ""}`;
     modalAmountEmail.appendChild(modalEmail);
 
     // modal body
@@ -1745,7 +1800,7 @@ function Pooler(config) {
       const script = document.createElement("script");
       // LOAD SCRIPT DYNAMICALLY AND ADD TO DOM
       script.src = "https://js.pusher.com/8.2.0/pusher.min.js";
-      script.async = true;
+      script.defer = true;
       script.onload = function () {
         // INITIALISE PUSHER AND EXPIRE LINK
         const BASE_URL = "https://websocket.inside.poolerapp.com";
@@ -1778,7 +1833,7 @@ function Pooler(config) {
           fetch(`${BASE_URL}/initialize`, { method: "GET", signal })
             .then()
             .catch();
-          pusherSignSubscribe.bind("data", function (data) {
+          expireSignSubscribe.bind("data", function (data) {
             if (data?.data?.signature) {
               callback(data?.data?.signature);
               removeSubscription();
@@ -1801,7 +1856,7 @@ function Pooler(config) {
                 "Content-Type": "application/json",
               },
               signal,
-              body: JSON.stringify(reqObject),
+              body: JSON.stringify(expireReqObject),
             });
           }
         });
@@ -1811,9 +1866,9 @@ function Pooler(config) {
     successIframe.addEventListener("load", handleIframe);
     document.body.appendChild(successIframe);
 
-    setTimeout(() => {
-      window.location.replace(data?.redirect_link);
-    }, 3000);
+    // setTimeout(() => {
+    //   window.location.replace(data?.merchantConfig?.redirect_link);
+    // }, 3000);
 
     // HANDLE EFFECTS ON SUCCESS
     var successRemove = "success-iframe";
@@ -1872,7 +1927,7 @@ function Pooler(config) {
     }
 
     closeBtn.addEventListener("click", function () {
-      window.location.replace(data?.redirect_link);
+      window.location.replace(data?.merchantConfig?.redirect_link);
       modal.style.display = "none";
       modal.parentNode.removeChild(modal);
       var childNodes = document.body.childNodes;
