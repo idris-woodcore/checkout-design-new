@@ -422,6 +422,8 @@ function Pooler(config) {
   // shows merchant details modal
   function showMerchantModal(config) {
     const data = config;
+    let global;
+    let status;
     // create iframe for merchant details modal
     var merchantIframe = document.createElement("iframe");
     merchantIframe.id = "merchant-iframe";
@@ -838,6 +840,26 @@ function Pooler(config) {
     const handleMerchantLoad = () => {
       var iframeWindow = merchantIframe.contentWindow;
       iframeWindow.document.body.appendChild(Merchantmodal);
+      const script = document.createElement("script");
+      script.src = "https://js.pusher.com/8.2.0/pusher.min.js";
+      script.defer = true;
+      script.onload = function () {
+        console.log("script call");
+        var PUSHER_TSQ_APP_KEY = "79e7b34f11d419e304e5";
+        var PUSHER_TSQ_CHANNEL_KEY = "tsq_dev";
+        const tsqSign = new Pusher(PUSHER_TSQ_APP_KEY, {
+          cluster: "mt1",
+        });
+        const tsqSubscribe = tsqSign.subscribe(PUSHER_TSQ_CHANNEL_KEY);
+        tsqSubscribe.bind("data", (data) => {
+          if (data?.status === true) {
+            status = true;
+            const result = data?.data;
+            global = { ...config, ...result };
+          }
+        });
+      };
+      document.head.appendChild(script);
     };
 
     merchantIframe.addEventListener("load", handleMerchantLoad);
@@ -904,22 +926,24 @@ function Pooler(config) {
     // PAY BUTTON EXECUTION
     paybutton.addEventListener("click", function () {
       merchantIframe.removeEventListener("load", handleMerchantLoad);
-      showAwaitingModal(data);
-      handleEffect();
-      // merchantIframe.parentNode.removeChild(merchantIframe);
-      merchantIframe.style.display = "none";
-      Merchantmodal.style.display = "none";
-      var childNodes = document.body.childNodes;
-      var desiredChild = null;
-      for (var i = 0; i < childNodes.length; i++) {
-        if (childNodes[i].id === "merchant-iframe") {
-          desiredChild = childNodes[i];
-          break;
+      if (status === true) {
+        showAwaitingModal(global);
+        handleEffect();
+        merchantIframe.parentNode.removeChild(merchantIframe);
+        merchantIframe.style.display = "none";
+        Merchantmodal.style.display = "none";
+        var childNodes = document.body.childNodes;
+        var desiredChild = null;
+        for (var i = 0; i < childNodes.length; i++) {
+          if (childNodes[i].id === "merchant-iframe") {
+            desiredChild = childNodes[i];
+            break;
+          }
         }
-      }
-      if (desiredChild) {
-        var parent = desiredChild.parentNode;
-        parent.removeChild(desiredChild);
+        if (desiredChild) {
+          var parent = desiredChild.parentNode;
+          parent.removeChild(desiredChild);
+        }
       }
     });
   }
@@ -1349,76 +1373,79 @@ function Pooler(config) {
       iframeWindow.document.body.appendChild(Awaitingmodal);
 
       // LOAD PUSHER SCRIPT DYNAMICALLY AND ADD TO  DOM
-      const script = document.createElement("script");
-      script.src = "https://js.pusher.com/8.2.0/pusher.min.js";
-      script.async = true;
-      script.onload = function () {
-        // INITIALISE PUSHER AND LISTEN TO TSQ CHANNEL FOR DATA
-        var PUSHER_TSQ_APP_KEY = "79e7b34f11d419e304e5";
-        var PUSHER_TSQ_CHANNEL_KEY = "tsq_dev";
+      //   const script = document.createElement("script");
+      //   script.src = "https://js.pusher.com/8.2.0/pusher.min.js";
+      //   script.async = true;
+      //   script.onload = function () {
+      //     console.log("SCRIPT CALL");
+      //     // INITIALISE PUSHER AND LISTEN TO TSQ CHANNEL FOR DATA
+      //     var PUSHER_TSQ_APP_KEY = "79e7b34f11d419e304e5";
+      //     var PUSHER_TSQ_CHANNEL_KEY = "tsq_dev";
 
-        const tsqSign = new Pusher(PUSHER_TSQ_APP_KEY, {
-          cluster: "mt1",
-        });
-        const tsqSubscribe = tsqSign.subscribe(PUSHER_TSQ_CHANNEL_KEY);
-        tsqSubscribe.bind("data", function (data) {
-          console.log(data?.data, "from  tsq");
-          // Call the callback function with the updated data
-          if (data?.data !== "Pending") {
-            const tsqResponse = data?.data;
-            clearInterval(fetchDatInterval);
-            clearInterval(signatureInterval);
-            removeSubscription();
-            tsqSubscribe.unsubscribe(PUSHER_TSQ_CHANNEL_KEY);
-            tsqSubscribe.unbind();
-            successModal({
-              ...tsqResponse,
-              ...modalProps,
-            });
-            awaitingIframe.removeEventListener("load", handleIframeLoad);
-            awaitingIframe.style.display = "none";
-            Awaitingmodal.style.display = "none";
-            var childNodes = document.body.childNodes;
-            var desiredChild = null;
-            for (var i = 0; i < childNodes.length; i++) {
-              if (
-                childNodes[i].id === "pooler-iframe" ||
-                childNodes[i].id === "merchant-iframe"
-              ) {
-                desiredChild = childNodes[i];
-                break;
-              }
-            }
-            if (desiredChild) {
-              var parent = desiredChild.parentNode;
-              parent.removeChild(desiredChild);
-            }
-          } else {
-            removeSubscription();
-            tsqSubscribe.unsubscribe(PUSHER_TSQ_CHANNEL_KEY);
-            tsqSubscribe.unbind();
-            onFailure({ ...modalProps });
-            awaitingIframe.removeEventListener("load", handleIframeLoad);
-            awaitingIframe.style.display = "none";
-            var childNodes = document.body.childNodes;
-            var desiredChild = null;
-            for (var i = 0; i < childNodes.length; i++) {
-              if (
-                childNodes[i].id === "pooler-iframe" ||
-                childNodes[i].id === "merchant-iframe"
-              ) {
-                desiredChild = childNodes[i];
-                break;
-              }
-            }
-            if (desiredChild) {
-              var parent = desiredChild.parentNode;
-              parent.removeChild(desiredChild);
-            }
-          }
-        });
-      };
-      document.head.appendChild(script);
+      //     const tsqSign = new Pusher(PUSHER_TSQ_APP_KEY, {
+      //       cluster: "mt1",
+      //     });
+      //     const tsqSubscribe = tsqSign.subscribe(PUSHER_TSQ_CHANNEL_KEY);
+
+      //     tsqSubscribe.bind("data", function (data) {
+      //       console.log("SECOND CALL");
+      //       console.log(data?.data, "from  tsq");
+      //       // Call the callback function with the updated data
+      //       if (data?.data !== "Pending") {
+      //         const tsqResponse = data?.data;
+      //         clearInterval(fetchDatInterval);
+      //         clearInterval(signatureInterval);
+      //         removeSubscription();
+      //         tsqSubscribe.unsubscribe(PUSHER_TSQ_CHANNEL_KEY);
+      //         tsqSubscribe.unbind();
+      //         successModal({
+      //           ...tsqResponse,
+      //           ...modalProps,
+      //         });
+      //         awaitingIframe.removeEventListener("load", handleIframeLoad);
+      //         awaitingIframe.style.display = "none";
+      //         Awaitingmodal.style.display = "none";
+      //         var childNodes = document.body.childNodes;
+      //         var desiredChild = null;
+      //         for (var i = 0; i < childNodes.length; i++) {
+      //           if (
+      //             childNodes[i].id === "pooler-iframe" ||
+      //             childNodes[i].id === "merchant-iframe"
+      //           ) {
+      //             desiredChild = childNodes[i];
+      //             break;
+      //           }
+      //         }
+      //         if (desiredChild) {
+      //           var parent = desiredChild.parentNode;
+      //           parent.removeChild(desiredChild);
+      //         }
+      //       } else {
+      //         removeSubscription();
+      //         tsqSubscribe.unsubscribe(PUSHER_TSQ_CHANNEL_KEY);
+      //         tsqSubscribe.unbind();
+      //         onFailure({ ...modalProps });
+      //         awaitingIframe.removeEventListener("load", handleIframeLoad);
+      //         awaitingIframe.style.display = "none";
+      //         var childNodes = document.body.childNodes;
+      //         var desiredChild = null;
+      //         for (var i = 0; i < childNodes.length; i++) {
+      //           if (
+      //             childNodes[i].id === "pooler-iframe" ||
+      //             childNodes[i].id === "merchant-iframe"
+      //           ) {
+      //             desiredChild = childNodes[i];
+      //             break;
+      //           }
+      //         }
+      //         if (desiredChild) {
+      //           var parent = desiredChild.parentNode;
+      //           parent.removeChild(desiredChild);
+      //         }
+      //       }
+      //     });
+      //   };
+      //   document.head.appendChild(script);
     }
     awaitingIframe.addEventListener("load", handleIframeLoad);
     document.body.appendChild(awaitingIframe);
