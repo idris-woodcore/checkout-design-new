@@ -1871,9 +1871,9 @@ function Pooler(config) {
     successIframe.addEventListener("load", handleIframe);
     document.body.appendChild(successIframe);
 
-    // setTimeout(() => {
-    //   window.location.replace(data?.merchantConfig?.redirect_link);
-    // }, 3000);
+    setTimeout(() => {
+      window.location.replace(data?.merchantConfig?.redirect_link);
+    }, 3000);
 
     // HANDLE EFFECTS ON SUCCESS
     var successRemove = "success-iframe";
@@ -3863,10 +3863,3 @@ function Pooler(config) {
 
   handleValidation(config);
 }
-
-// TO DO
-// IMPLEMENT SOCKET / PUSHER END POINT
-// FIX BUGS ASSOCIATED WITH CHECKOUT
-// STYLES
-// PLUG IN THE PUSHER
-// IMPLEMENT CALL BACKS
