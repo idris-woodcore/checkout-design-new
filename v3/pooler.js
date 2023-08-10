@@ -300,7 +300,7 @@ function Pooler(config) {
         const pusherSignSubscribe = pusherSign.subscribe(
           PUSHER_SIGN_CHANNEL_KEY
         );
-
+        // CANCEL SIGNATURE-PUSHER SUBSCRIPTION
         const removeSubscription = () => {
           pusherSignSubscribe.unsubscribe(PUSHER_SIGN_CHANNEL_KEY);
           pusherSignSubscribe.unbind();
@@ -755,10 +755,10 @@ function Pooler(config) {
     timerText.style.textAlign = "center";
     timerText.style.fontFamily =
       '"GraphikMedium", "Source Sans Pro", sans-serif';
-    timerText.textContent = `Expires in 40:00`;
+    timerText.textContent = `Expires in 30:00`;
 
     // // countdown time
-    var duration = 2399;
+    var duration = 1799;
     var countdown = "";
     var timer = setInterval(function () {
       var minutes = Math.floor(duration / 60);
@@ -928,6 +928,7 @@ function Pooler(config) {
   function showAwaitingModal(data) {
     // spin up an iframe for awaiting modal
     const modalProps = data;
+    console.log(modalProps, "llo");
     var awaitingIframe = document.createElement("iframe");
     awaitingIframe.id = "awaiting-iframe";
     awaitingIframe.style.position = "fixed";
@@ -1352,123 +1353,69 @@ function Pooler(config) {
       script.src = "https://js.pusher.com/8.2.0/pusher.min.js";
       script.async = true;
       script.onload = function () {
-        var PUSHER_SIGN_APP_KEY = "f5715eb30d0b1b069d22";
-        var PUSHER_SIGN_CHANNEL_KEY = "signature_dev";
-
+        // INITIALISE PUSHER AND LISTEN TO TSQ CHANNEL FOR DATA
         var PUSHER_TSQ_APP_KEY = "79e7b34f11d419e304e5";
         var PUSHER_TSQ_CHANNEL_KEY = "tsq_dev";
 
-        const pusherSign = new Pusher(PUSHER_SIGN_APP_KEY, {
+        const tsqSign = new Pusher(PUSHER_TSQ_APP_KEY, {
           cluster: "mt1",
         });
-        const pusherSignSubscribe = pusherSign.subscribe(
-          PUSHER_SIGN_CHANNEL_KEY
-        );
-
-        const removeSubscription = () => {
-          pusherSignSubscribe.unsubscribe(PUSHER_SIGN_CHANNEL_KEY);
-          pusherSignSubscribe.unbind();
-        };
-
-        const fetchData = () => {
-          fetch(`${BASE_URL}/initialize`, { method: "GET" }).then().catch();
-        };
-        // get signature from pusher signature channel
-        function getSignature(callback) {
-          pusherSignSubscribe.bind("data", function (data) {
-            // Call the callback function with the updated data
-            if (data?.data?.signature) {
-              return callback(data?.data?.signature);
-            }
-          });
-        }
-        const fetchDatInterval = setInterval(() => {
-          fetchData();
-        }, 5000);
-
-        getSignature((signatureValue) => {
-          const callTsq = (signature) => {
-            var tsqObject = {
-              action: "tsq",
-              signature: signature,
-              account_no: data?.data?.account_no,
-              pub_key: data?.merchantConfig?.pub_key,
-            };
-
-            fetch(`${BASE_URL}/socket`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(tsqObject),
+        const tsqSubscribe = tsqSign.subscribe(PUSHER_TSQ_CHANNEL_KEY);
+        tsqSubscribe.bind("data", function (data) {
+          console.log(data?.data, "from  tsq");
+          // Call the callback function with the updated data
+          if (data?.data !== "Pending") {
+            const tsqResponse = data?.data;
+            clearInterval(fetchDatInterval);
+            clearInterval(signatureInterval);
+            removeSubscription();
+            tsqSubscribe.unsubscribe(PUSHER_TSQ_CHANNEL_KEY);
+            tsqSubscribe.unbind();
+            successModal({
+              ...tsqResponse,
+              ...modalProps,
             });
-          };
-          const signatureInterval = setInterval(() => {
-            callTsq(signatureValue);
-          }, 6000);
-
-          // initialise and subcribe to payment link information
-          const tsqSign = new Pusher(PUSHER_TSQ_APP_KEY, {
-            cluster: "mt1",
-          });
-          const tsqSubscribe = tsqSign.subscribe(PUSHER_TSQ_CHANNEL_KEY);
-
-          tsqSubscribe.bind("data", function (data) {
-            // Call the callback function with the updated data
-            if (data?.data !== "Pending") {
-              const tsqResponse = data?.data;
-              clearInterval(fetchDatInterval);
-              clearInterval(signatureInterval);
-              removeSubscription();
-              tsqSubscribe.unsubscribe(PUSHER_TSQ_CHANNEL_KEY);
-              tsqSubscribe.unbind();
-              successModal({
-                ...tsqResponse,
-                email: modalProps?.data?.email,
-                redirect_link: modalProps?.merchantConfig?.redirect_link,
-              });
-              awaitingIframe.removeEventListener("load", handleIframeLoad);
-              awaitingIframe.style.display = "none";
-              Awaitingmodal.style.display = "none";
-              var childNodes = document.body.childNodes;
-              var desiredChild = null;
-              for (var i = 0; i < childNodes.length; i++) {
-                if (
-                  childNodes[i].id === "pooler-iframe" ||
-                  childNodes[i].id === "merchant-iframe"
-                ) {
-                  desiredChild = childNodes[i];
-                  break;
-                }
-              }
-              if (desiredChild) {
-                var parent = desiredChild.parentNode;
-                parent.removeChild(desiredChild);
-              }
-            } else {
-              removeSubscription();
-              tsqSubscribe.unsubscribe(PUSHER_TSQ_CHANNEL_KEY);
-              tsqSubscribe.unbind();
-              onFailure({ ...modalProps });
-              awaitingIframe.removeEventListener("load", handleIframeLoad);
-              awaitingIframe.style.display = "none";
-              var childNodes = document.body.childNodes;
-              var desiredChild = null;
-              for (var i = 0; i < childNodes.length; i++) {
-                if (
-                  childNodes[i].id === "pooler-iframe" ||
-                  childNodes[i].id === "merchant-iframe"
-                ) {
-                  desiredChild = childNodes[i];
-                  break;
-                }
-              }
-              if (desiredChild) {
-                var parent = desiredChild.parentNode;
-                parent.removeChild(desiredChild);
+            awaitingIframe.removeEventListener("load", handleIframeLoad);
+            awaitingIframe.style.display = "none";
+            Awaitingmodal.style.display = "none";
+            var childNodes = document.body.childNodes;
+            var desiredChild = null;
+            for (var i = 0; i < childNodes.length; i++) {
+              if (
+                childNodes[i].id === "pooler-iframe" ||
+                childNodes[i].id === "merchant-iframe"
+              ) {
+                desiredChild = childNodes[i];
+                break;
               }
             }
-          });
+            if (desiredChild) {
+              var parent = desiredChild.parentNode;
+              parent.removeChild(desiredChild);
+            }
+          } else {
+            removeSubscription();
+            tsqSubscribe.unsubscribe(PUSHER_TSQ_CHANNEL_KEY);
+            tsqSubscribe.unbind();
+            onFailure({ ...modalProps });
+            awaitingIframe.removeEventListener("load", handleIframeLoad);
+            awaitingIframe.style.display = "none";
+            var childNodes = document.body.childNodes;
+            var desiredChild = null;
+            for (var i = 0; i < childNodes.length; i++) {
+              if (
+                childNodes[i].id === "pooler-iframe" ||
+                childNodes[i].id === "merchant-iframe"
+              ) {
+                desiredChild = childNodes[i];
+                break;
+              }
+            }
+            if (desiredChild) {
+              var parent = desiredChild.parentNode;
+              parent.removeChild(desiredChild);
+            }
+          }
         });
       };
       document.head.appendChild(script);
@@ -1489,14 +1436,23 @@ function Pooler(config) {
       }
     }
 
-    // fetch(`${BASE_URL}/initialize`, { method: "GET" }).then().catch();
+    // CHECK FOR POOLER IFRAME AND REMOVE FROM DOM
+    var poolerRemove = "pooler-iframe";
+    var poolerWithId = document.querySelectorAll('[id="' + poolerRemove + '"]');
+
+    if (poolerWithId.length > 1) {
+      // Keep the first element and remove the rest
+      for (var i = 1; i < poolerWithId.length; i++) {
+        poolerWithId[i].parentNode.removeChild(poolerWithId[i]);
+      }
+    }
 
     closeBtn.addEventListener("click", function () {
       awaitingIframe.parentNode.removeChild(awaitingIframe);
       Awaitingmodal.style.display = "none";
       overlay.style.display = "none";
-      var childNodes = document.body.childNodes;
-      var desiredChild = null;
+      //   var childNodes = document.body.childNodes;
+      //   var desiredChild = null;
       // for (var i = 0; i < childNodes.length; i++) {
       //   if (childNodes[i].id === "awaiting-iframe") {
       //     desiredChild = childNodes[i];
@@ -1756,10 +1712,76 @@ function Pooler(config) {
     modal.appendChild(modalContent);
     // document.body.appendChild(modal);
 
-    successIframe.addEventListener("load", () => {
+    function handleIframe() {
       var iframeWindow = successIframe.contentWindow;
       iframeWindow.document.body.appendChild(modal);
-    });
+      const script = document.createElement("script");
+      // LOAD SCRIPT DYNAMICALLY AND ADD TO DOM
+      script.src = "https://js.pusher.com/8.2.0/pusher.min.js";
+      script.async = true;
+      script.onload = function () {
+        // INITIALISE PUSHER AND EXPIRE LINK
+        const BASE_URL = "https://websocket.inside.poolerapp.com";
+        var PUSHER_SIGN_APP_KEY = "f5715eb30d0b1b069d22";
+        var PUSHER_SIGN_CHANNEL_KEY = "signature_dev";
+        var PUSHER_EXPIRE_APP_KEY = "4cf2c83bf42ae2dcf19f";
+        var PUSHER_EXPIRE_CHANNEL_KEY = "expire_dev";
+
+        const pusherSign = new Pusher(PUSHER_SIGN_APP_KEY, {
+          cluster: "mt1",
+        });
+        const pusherSignSubscribe = pusherSign.subscribe(
+          PUSHER_SIGN_CHANNEL_KEY
+        );
+        // CANCEL SIGNATURE-PUSHER SUBSCRIPTION
+        const removeSubscription = () => {
+          pusherSignSubscribe.unsubscribe(PUSHER_SIGN_CHANNEL_KEY);
+          pusherSignSubscribe.unbind();
+        };
+
+        const expireSign = new Pusher(PUSHER_EXPIRE_APP_KEY, {
+          cluster: "mt1",
+        });
+
+        const expireSignSubscribe = expireSign.subscribe(
+          PUSHER_EXPIRE_CHANNEL_KEY
+        );
+
+        function getSignature(callback) {
+          fetch(`${BASE_URL}/initialize`, { method: "GET", signal })
+            .then()
+            .catch();
+          pusherSignSubscribe.bind("data", function (data) {
+            if (data?.data?.signature) {
+              callback(data?.data?.signature);
+              removeSubscription();
+            }
+          });
+        }
+
+        getSignature((signature) => {
+          function expirePayment() {
+            var expireReqObject = {
+              action: "expire",
+              signature: signature,
+              account_no: "",
+              pub_key: "",
+            };
+
+            fetch(`${BASE_URL}/socket`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              signal,
+              body: JSON.stringify(reqObject),
+            });
+          }
+        });
+      };
+    }
+
+    successIframe.addEventListener("load", handleIframe);
     document.body.appendChild(successIframe);
 
     setTimeout(() => {
@@ -2707,7 +2729,7 @@ function Pooler(config) {
     paymentDetails.appendChild(li1);
     paymentDetails.appendChild(li2);
     paymentDetails.appendChild(li3);
-    // modalBody.appendChild(paymentDetails);
+    modalBody.appendChild(paymentDetails);
 
     // button and countdwon timer
     var modalFooter = document.createElement("div");
