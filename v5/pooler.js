@@ -1567,8 +1567,6 @@ function Pooler(config) {
 
   // SUCCESS MODAL, establishes that payments was successful
   function successModal(data) {
-    const controller = new AbortController();
-    const signal = controller.signal;
     // spins up iframe for success modal
     var successIframe = document.createElement("iframe");
     successIframe.id = "success-iframe";
@@ -1801,9 +1799,6 @@ function Pooler(config) {
     modal.appendChild(modalContent);
     // document.body.appendChild(modal);
 
-    const successData = data;
-    console.log(successData, "success data");
-
     function handleIframe() {
       var iframeWindow = successIframe.contentWindow;
       iframeWindow.document.body.appendChild(modal);
@@ -1825,24 +1820,28 @@ function Pooler(config) {
         const pusherSignSubscribe = pusherSign.subscribe(
           PUSHER_SIGN_CHANNEL_KEY
         );
-
         // CANCEL SIGNATURE-PUSHER SUBSCRIPTION
         const removeSubscription = () => {
           pusherSignSubscribe.unsubscribe(PUSHER_SIGN_CHANNEL_KEY);
           pusherSignSubscribe.unbind();
         };
 
-        const fetchData = () => {
-          fetch(`${BASE_URL}/initialize`, { method: "GET" });
-        };
-        const fetchDataInterval = setInterval(() => {
-          fetchData();
-        }, 3000);
+        const expireSign = new Pusher(PUSHER_EXPIRE_APP_KEY, {
+          cluster: "mt1",
+        });
+
+        const expireSignSubscribe = expireSign.subscribe(
+          PUSHER_EXPIRE_CHANNEL_KEY
+        );
 
         function getSignature(callback) {
-          pusherSignSubscribe.bind("data", function (data) {
+          fetch(`${BASE_URL}/initialize`, { method: "GET", signal })
+            .then()
+            .catch();
+          expireSignSubscribe.bind("data", function (data) {
             if (data?.data?.signature) {
               callback(data?.data?.signature);
+              removeSubscription();
             }
           });
         }
@@ -1852,8 +1851,8 @@ function Pooler(config) {
             var expireReqObject = {
               action: "expire",
               signature: signature,
-              account_no: successData?.data?.account_no,
-              pub_key: successData?.merchantConfig?.pub_key,
+              account_no: "",
+              pub_key: "",
             };
 
             fetch(`${BASE_URL}/socket`, {
@@ -1861,39 +1860,20 @@ function Pooler(config) {
               headers: {
                 "Content-Type": "application/json",
               },
+              signal,
               body: JSON.stringify(expireReqObject),
             });
-
-            const expireSign = new Pusher(PUSHER_EXPIRE_APP_KEY, {
-              cluster: "mt1",
-            });
-
-            const expireSignSubscribe = expireSign.subscribe(
-              PUSHER_EXPIRE_CHANNEL_KEY
-            );
-
-            expireSignSubscribe.bind("data", (data) => {
-              if (data?.status === true) {
-                window.location.replace(
-                  successData?.merchantConfig?.redirect_link
-                );
-                removeSubscription();
-                clearInterval(fetchDataInterval);
-                clearInterval(expirePaymentInterval);
-              }
-            });
           }
-
-          const expirePaymentInterval = setInterval(() => {
-            expirePayment();
-          }, 4000);
         });
       };
-      document.head.appendChild(script);
     }
 
     successIframe.addEventListener("load", handleIframe);
     document.body.appendChild(successIframe);
+
+    setTimeout(() => {
+      window.location.replace(data?.merchantConfig?.redirect_link);
+    }, 3000);
 
     // HANDLE EFFECTS ON SUCCESS
     var successRemove = "success-iframe";
