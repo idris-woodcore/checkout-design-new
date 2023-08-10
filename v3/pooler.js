@@ -844,7 +844,6 @@ function Pooler(config) {
       script.src = "https://js.pusher.com/8.2.0/pusher.min.js";
       script.defer = true;
       script.onload = function () {
-        console.log("script call");
         var PUSHER_TSQ_APP_KEY = "79e7b34f11d419e304e5";
         var PUSHER_TSQ_CHANNEL_KEY = "tsq_dev";
         const tsqSign = new Pusher(PUSHER_TSQ_APP_KEY, {
@@ -2602,8 +2601,10 @@ function Pooler(config) {
     modalAmount.style.textAlign = "right";
     modalAmount.style.fontSize = "1.125rem";
     modalAmount.style.paddingBottom = "8px";
-    modalAmount.textContent = `${data?.currency_code}${data?.amount}`;
-    // modalAmountEmail.appendChild(modalAmount);
+    modalAmount.textContent = `${data?.data?.currency_code || "NGN"}${
+      data?.data?.amount || ""
+    }`;
+    modalAmountEmail.appendChild(modalAmount);
 
     // email
     var modalEmail = document.createElement("div");
@@ -2613,8 +2614,8 @@ function Pooler(config) {
     modalEmail.style.color = "#8f9bb2";
     modalEmail.style.fontStyle = "normal";
     modalEmail.style.fontSize = "1rem";
-    modalEmail.textContent = `${data?.email}`;
-    // modalAmountEmail.appendChild(modalEmail);
+    modalEmail.textContent = `${data?.data?.email}`;
+    modalAmountEmail.appendChild(modalEmail);
 
     // modal body
     var modalBody = document.createElement("div");
@@ -2729,7 +2730,7 @@ function Pooler(config) {
     merchatName.style.fontWeight = "500";
     merchatName.style.color = "#000";
     merchatName.style.marginTop = "5px";
-    merchatName.textContent = `${data.display_name}`;
+    merchatName.textContent = `${data?.data?.display_name}`;
     li1.appendChild(merchant);
     li1.appendChild(merchatName);
 
@@ -2770,7 +2771,7 @@ function Pooler(config) {
     copy.style.left = "102%";
     copy.style.cursor = "pointer";
     copy.addEventListener("click", function () {
-      navigator.clipboard.writeText(`${data?.account_no}`);
+      navigator.clipboard.writeText(`${data?.data?.account_no}`);
     });
     accDetails.appendChild(copy);
     li2.appendChild(accNum);
@@ -2794,7 +2795,7 @@ function Pooler(config) {
     bank.style.color = "#8f9bb2";
     var bankDetails = document.createElement("span");
     // bankDetails.className = "payment-detail-bold text-truncate";
-    bankDetails.textContent = `${data?.bank_name}`;
+    bankDetails.textContent = `${data?.data?.bank_name}`;
     bankDetails.style.width = "125px";
     bankDetails.style.whiteSpace = "nowrap";
     bankDetails.style.overflow = "hidden";
@@ -2837,7 +2838,7 @@ function Pooler(config) {
       '"GraphikMedium", "Source Sans Pro", sans-serif';
     paybutton.textContent = "Request for new account";
 
-    modalFooter.appendChild(paybutton);
+    // modalFooter.appendChild(paybutton);
 
     // secure by pooler
     var secureTextContainer = document.createElement("div");
