@@ -1,0 +1,24 @@
+{
+  "name": "checkout-design-new",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "uglifyjs index.js -o v8/pooler.min.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/idris-woodcore/checkout-design-new.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/idris-woodcore/checkout-design-new/issues"
+  },
+  "homepage": "https://github.com/idris-woodcore/checkout-design-new#readme",
+  "dependencies": {
+    "uglify-js": "^3.17.4"
+  }
+}
