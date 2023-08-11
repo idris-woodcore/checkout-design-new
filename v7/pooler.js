@@ -398,6 +398,28 @@ function Pooler(config) {
     let global;
     let status;
 
+    const formatCurrency = (value) => {
+      const sanitizedValue = value
+        ?.replace(/[^\d.-]/g, "")
+        ?.replace(/^0+/, "")
+        ?.replace(/--+/g, "");
+      const isNegative = sanitizedValue.charAt(0) === "-";
+      const sign = isNegative ? "-" : "";
+      const absoluteValue = isNegative
+        ? sanitizedValue.slice(1)
+        : sanitizedValue;
+      const [integerPart, decimalPart] = absoluteValue.split(".");
+      const formattedInteger = integerPart.replace(
+        /\B(?=(\d{3})+(?!\d))/g,
+        ","
+      );
+      let formattedValue = `${sign}${formattedInteger}`;
+      if (decimalPart) {
+        formattedValue += `.${decimalPart}`;
+      }
+      return formattedValue;
+    };
+
     // create iframe for merchant details modal
     var merchantIframe = document.createElement("iframe");
     merchantIframe.id = "merchant-iframe";
@@ -447,12 +469,6 @@ function Pooler(config) {
     closeBtn.style.backgroundColor = "#FAFAFD";
     closeBtn.style.padding = "2px 3px";
     closeBtn.style.borderRadius = "100%";
-
-    // closeBtn.addEventListener("mouseover", function () {
-    //   closeBtn.style.backgroundColor = "red";
-    //   closeBtn.style.border = "1px solid red";
-    //   closeBtn.style.borderRadius = "100%";
-    // });
 
     // modal text parent
     var modalTextParent = document.createElement("div");
@@ -514,7 +530,9 @@ function Pooler(config) {
     modalAmount.style.textAlign = "right";
     modalAmount.style.fontSize = "1.125rem";
     modalAmount.style.paddingBottom = "8px";
-    modalAmount.textContent = `${data?.data?.currency_code}${data?.data?.amount}`;
+    modalAmount.textContent = `${data?.data?.currency_code}${formatCurrency(
+      data?.data?.amount
+    )}`;
     modalAmountEmail.appendChild(modalAmount);
 
     // email
@@ -826,9 +844,15 @@ function Pooler(config) {
         const tsqSubscribe = tsqSign.subscribe(PUSHER_TSQ_CHANNEL_KEY);
         tsqSubscribe.bind(account_no, (data) => {
           if (data?.status === true) {
+            merchantIframe.removeEventListener("load", handleMerchantLoad);
             status = true;
             const result = data?.data;
             global = { ...config, ...result };
+            showAwaitingModal(global);
+            handleEffect();
+            // merchantIframe.parentNode.removeChild(merchantIframe);
+            merchantIframe.style.display = "none";
+            Merchantmodal.style.display = "none";
           }
         });
       };
@@ -925,6 +949,28 @@ function Pooler(config) {
   function showAwaitingModal(data) {
     // spin up an iframe for awaiting modal
     const modalProps = data;
+    const formatCurrency = (value) => {
+      const sanitizedValue = value
+        ?.replace(/[^\d.-]/g, "")
+        ?.replace(/^0+/, "")
+        ?.replace(/--+/g, "");
+      const isNegative = sanitizedValue.charAt(0) === "-";
+      const sign = isNegative ? "-" : "";
+      const absoluteValue = isNegative
+        ? sanitizedValue.slice(1)
+        : sanitizedValue;
+      const [integerPart, decimalPart] = absoluteValue.split(".");
+      const formattedInteger = integerPart.replace(
+        /\B(?=(\d{3})+(?!\d))/g,
+        ","
+      );
+      let formattedValue = `${sign}${formattedInteger}`;
+      if (decimalPart) {
+        formattedValue += `.${decimalPart}`;
+      }
+      return formattedValue;
+    };
+
     var awaitingIframe = document.createElement("iframe");
     awaitingIframe.id = "awaiting-iframe";
     awaitingIframe.style.position = "fixed";
@@ -1032,7 +1078,9 @@ function Pooler(config) {
     modalAmount.style.textAlign = "right";
     modalAmount.style.fontSize = "1.125rem";
     modalAmount.style.paddingBottom = "8px";
-    modalAmount.textContent = `${data?.data?.currency_code}${data?.data?.amount}`;
+    modalAmount.textContent = `${data?.data?.currency_code}${formatCurrency(
+      data?.data?.amount
+    )}`;
     modalAmountEmail.appendChild(modalAmount);
 
     // email
@@ -1443,6 +1491,27 @@ function Pooler(config) {
   function successModal(data) {
     const controller = new AbortController();
     const signal = controller.signal;
+    const formatCurrency = (value) => {
+      const sanitizedValue = value
+        ?.replace(/[^\d.-]/g, "")
+        ?.replace(/^0+/, "")
+        ?.replace(/--+/g, "");
+      const isNegative = sanitizedValue.charAt(0) === "-";
+      const sign = isNegative ? "-" : "";
+      const absoluteValue = isNegative
+        ? sanitizedValue.slice(1)
+        : sanitizedValue;
+      const [integerPart, decimalPart] = absoluteValue.split(".");
+      const formattedInteger = integerPart.replace(
+        /\B(?=(\d{3})+(?!\d))/g,
+        ","
+      );
+      let formattedValue = `${sign}${formattedInteger}`;
+      if (decimalPart) {
+        formattedValue += `.${decimalPart}`;
+      }
+      return formattedValue;
+    };
     // spins up iframe for success modal
     var successIframe = document.createElement("iframe");
     successIframe.id = "success-iframe";
@@ -1556,7 +1625,7 @@ function Pooler(config) {
     modalAmount.style.paddingBottom = "8px";
     // modalAmount.textContent = `NGN${data?.amount}`;
     modalAmount.textContent = `${data?.data?.currency_code || "NGN"}${
-      data?.data?.amount || ""
+      formatCurrency(data?.data?.amount) || ""
     }`;
     modalAmountEmail.appendChild(modalAmount);
 
@@ -1676,7 +1745,6 @@ function Pooler(config) {
     // document.body.appendChild(modal);
 
     const successData = data;
-    console.log(successData, "success data");
 
     function handleIframe() {
       var iframeWindow = successIframe.contentWindow;
@@ -1859,6 +1927,27 @@ function Pooler(config) {
     const controller = new AbortController();
     const signal = controller.signal;
     const sessionData = data;
+    const formatCurrency = (value) => {
+      const sanitizedValue = value
+        ?.replace(/[^\d.-]/g, "")
+        ?.replace(/^0+/, "")
+        ?.replace(/--+/g, "");
+      const isNegative = sanitizedValue.charAt(0) === "-";
+      const sign = isNegative ? "-" : "";
+      const absoluteValue = isNegative
+        ? sanitizedValue.slice(1)
+        : sanitizedValue;
+      const [integerPart, decimalPart] = absoluteValue.split(".");
+      const formattedInteger = integerPart.replace(
+        /\B(?=(\d{3})+(?!\d))/g,
+        ","
+      );
+      let formattedValue = `${sign}${formattedInteger}`;
+      if (decimalPart) {
+        formattedValue += `.${decimalPart}`;
+      }
+      return formattedValue;
+    };
 
     var sessionIframe = document.createElement("iframe");
     sessionIframe.id = "session-iframe";
@@ -1967,9 +2056,9 @@ function Pooler(config) {
     modalAmount.style.textAlign = "right";
     modalAmount.style.fontSize = "1.125rem";
     modalAmount.style.paddingBottom = "8px";
-    modalAmount.textContent = `${data?.data?.currency_code || "NGN"}${
-      data?.data?.amount
-    }`;
+    modalAmount.textContent = `${
+      data?.data?.currency_code || "NGN"
+    }${formatCurrency(data?.data?.amount)}`;
     modalAmountEmail.appendChild(modalAmount);
 
     // email
@@ -2427,6 +2516,27 @@ function Pooler(config) {
   // ON FAILURE CALLBACK
   function onFailure(data) {
     // spins up failure expiration iframe
+    const formatCurrency = (value) => {
+      const sanitizedValue = value
+        ?.replace(/[^\d.-]/g, "")
+        ?.replace(/^0+/, "")
+        ?.replace(/--+/g, "");
+      const isNegative = sanitizedValue.charAt(0) === "-";
+      const sign = isNegative ? "-" : "";
+      const absoluteValue = isNegative
+        ? sanitizedValue.slice(1)
+        : sanitizedValue;
+      const [integerPart, decimalPart] = absoluteValue.split(".");
+      const formattedInteger = integerPart.replace(
+        /\B(?=(\d{3})+(?!\d))/g,
+        ","
+      );
+      let formattedValue = `${sign}${formattedInteger}`;
+      if (decimalPart) {
+        formattedValue += `.${decimalPart}`;
+      }
+      return formattedValue;
+    };
     var failureIFrame = document.createElement("iframe");
     failureIFrame.id = "failure-iframe";
     failureIFrame.style.position = "fixed";
@@ -2535,7 +2645,7 @@ function Pooler(config) {
     modalAmount.style.fontSize = "1.125rem";
     modalAmount.style.paddingBottom = "8px";
     modalAmount.textContent = `${data?.data?.currency_code || "NGN"}${
-      data?.data?.amount || ""
+      formatCurrency(data?.data?.amount) || ""
     }`;
     modalAmountEmail.appendChild(modalAmount);
 
@@ -2870,6 +2980,27 @@ function Pooler(config) {
   // ON ERROR
   function onError(data) {
     // spins up failure expiration iframe
+    const formatCurrency = (value) => {
+      const sanitizedValue = value
+        ?.replace(/[^\d.-]/g, "")
+        ?.replace(/^0+/, "")
+        ?.replace(/--+/g, "");
+      const isNegative = sanitizedValue.charAt(0) === "-";
+      const sign = isNegative ? "-" : "";
+      const absoluteValue = isNegative
+        ? sanitizedValue.slice(1)
+        : sanitizedValue;
+      const [integerPart, decimalPart] = absoluteValue.split(".");
+      const formattedInteger = integerPart.replace(
+        /\B(?=(\d{3})+(?!\d))/g,
+        ","
+      );
+      let formattedValue = `${sign}${formattedInteger}`;
+      if (decimalPart) {
+        formattedValue += `.${decimalPart}`;
+      }
+      return formattedValue;
+    };
     var failureIFrame = document.createElement("iframe");
     failureIFrame.id = "error-iframe";
     failureIFrame.style.position = "fixed";
@@ -2977,7 +3108,7 @@ function Pooler(config) {
     modalAmount.style.textAlign = "right";
     modalAmount.style.fontSize = "1.125rem";
     modalAmount.style.paddingBottom = "8px";
-    modalAmount.textContent = `NGN${data?.amount}`;
+    modalAmount.textContent = `NGN${formatCurrency(data?.amount)}`;
     modalAmountEmail.appendChild(modalAmount);
 
     // email
@@ -3711,7 +3842,14 @@ function Pooler(config) {
   }
 
   function handleValidation(config) {
-    if (config.email && config.amount && config.pub_key) {
+    const validateEmail = (email) => {
+      const EmailRegexp =
+        /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+      return EmailRegexp.test(email);
+    };
+    const email = validateEmail(config.email);
+
+    if (config.email && config.amount && config.pub_key && email === true) {
       payWithPooler();
     } else {
       onValidation(config);
@@ -3722,20 +3860,6 @@ function Pooler(config) {
 }
 
 //
-//  FORMAT THE AMOUNT
-//  VALIDATE EMAIL WITH REGEX
-//  MOVE TO AWAITING AFTER TSQ RETURNS DATA
-//  FORMAT AMOUNT ON PAYMENT LINK CRXN PAGE
-//  ADD PLACEHOLDER ON REDIRECT
-// REMOVE CURRENCY DROPDOWN
-// add extra field
-// change to advanced options
-// change the description
-// fix the use link on link template
-// coming on soon on invoice etc
-// change icons on navbar
-// add refresh animation
-// truncate txn ref
-//  restructure sender and rec details on txn details 
-//  format amount on txn details
-// work on the icon on payment page 
+//  FORMAT THE AMOUNT --> DONE
+//  VALIDATE EMAIL WITH REGEX --> DONE
+//  MOVE TO AWAITING AFTER TSQ RETURNS DATA --> DONE
