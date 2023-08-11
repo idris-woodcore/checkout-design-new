@@ -1,48 +1,4 @@
-var BASE_URL = "https://websocket.inside.poolerapp.com";
-
 function Pooler(config) {
-  // var timerText = document.createElement("span");
-
-  // function timer() {
-  //   timerText.style.textAlign = "center";
-  //   timerText.style.fontFamily =
-  //     '"GraphikMedium", "Source Sans Pro", sans-serif';
-  //   timerText.textContent = `Expires in 30:0`;
-  //   timerText.style.color = "#8F9BB2";
-  //   timerText.style.fontWeight = "400";
-  //   var duration = 1799;
-  //   var countdown = "";
-  //   var timer = setInterval(function () {
-  //     var minutes = Math.floor(duration / 60);
-  //     var seconds = duration % 60;
-  //     countdown = minutes + ":" + seconds;
-  //     if (duration <= 0) {
-  //       showSessionExpirationModal(data);
-  //       clearInterval(timer);
-  //       clearInterval(timer);
-  //       var childNodes = document.body.childNodes;
-  //       var desiredChild = null;
-  //       for (var i = 0; i < childNodes.length; i++) {
-  //         if (childNodes[i].id === "merchant-modal") {
-  //           desiredChild = childNodes[i];
-  //           break;
-  //         }
-  //       }
-  //       if (desiredChild) {
-  //         var parent = desiredChild.parentNode;
-  //         parent.removeChild(desiredChild);
-  //         console.log("yeah");
-  //       }
-  //     }
-  //     duration--;
-  //     timerText.textContent = `Expires in ${
-  //       countdown !== undefined ? countdown : ""
-  //     }`;
-  //   }, 1000);
-
-  //   // modalFooter.appendChild(timerText);
-  // }
-
   let overlay = "";
 
   var styles = document.createElement("style");
@@ -305,18 +261,28 @@ function Pooler(config) {
           pusherSignSubscribe.unsubscribe(PUSHER_SIGN_CHANNEL_KEY);
           pusherSignSubscribe.unbind();
         };
+
+        const generateUniqueId = () => {
+          const timestamp = Date.now();
+          const random = Math.random().toString(36).substring(2);
+          return `${timestamp}${random}`;
+        };
+        const event_name = generateUniqueId();
+
         const fetchData = () => {
-          fetch(`${BASE_URL}/initialize`, { method: "GET", signal });
+          fetch(`${BASE_URL}/initialize?event_name=${event_name}`, {
+            method: "GET",
+            signal,
+          });
         };
         const fetchDataInterval = setInterval(() => {
           fetchData();
         }, 3000);
 
         function getSignature(callback) {
-          pusherSignSubscribe.bind("data", function (data) {
+          pusherSignSubscribe.bind(`${event_name}`, function (data) {
             if (data?.data?.signature) {
               callback(data?.data?.signature);
-              removeSubscription();
             }
           });
         }
@@ -328,6 +294,7 @@ function Pooler(config) {
               email: config?.email,
               amount: config?.amount,
               pub_key: config?.pub_key,
+              event_name,
               // payment_link_reference: config?.reference,
             };
 
@@ -359,7 +326,7 @@ function Pooler(config) {
             }
             const showMerchantModalOnce = executeOnce(showMerchantModal);
 
-            pusherPaymentSubscribe.bind("data", (data) => {
+            pusherPaymentSubscribe.bind(`${event_name}`, (data) => {
               if (data?.data?.status === "01") {
                 clearInterval(fetchDataInterval);
                 clearInterval(initiatePaymentInterval);
@@ -430,6 +397,7 @@ function Pooler(config) {
     const data = config;
     let global;
     let status;
+
     // create iframe for merchant details modal
     var merchantIframe = document.createElement("iframe");
     merchantIframe.id = "merchant-iframe";
@@ -710,7 +678,7 @@ function Pooler(config) {
     bankDetails.textContent = `${data?.data?.bank_name}`;
     bankDetails.style.whiteSpace = "nowrap";
     bankDetails.style.overflow = "hidden";
-    bankDetails.style.textOverflow = "ellipsis";
+    // bankDetails.style.textOverflow = "ellipsis";
     bankDetails.style.fontFamily = "GraphikMedium, sans-serif";
     bankDetails.style.fontWeight = "500";
     bankDetails.style.marginTop = "5px";
@@ -791,7 +759,6 @@ function Pooler(config) {
         if (desiredChild) {
           var parent = desiredChild.parentNode;
           parent.removeChild(desiredChild);
-          console.log("yeah");
         }
       }
       duration--;
@@ -844,6 +811,7 @@ function Pooler(config) {
     Merchantmodal.appendChild(modalContent);
     // overlay.appendChild(modal);
     const handleMerchantLoad = () => {
+      const account_no = data?.data?.account_no;
       var iframeWindow = merchantIframe.contentWindow;
       iframeWindow.document.body.appendChild(Merchantmodal);
       const script = document.createElement("script");
@@ -856,7 +824,7 @@ function Pooler(config) {
           cluster: "mt1",
         });
         const tsqSubscribe = tsqSign.subscribe(PUSHER_TSQ_CHANNEL_KEY);
-        tsqSubscribe.bind("data", (data) => {
+        tsqSubscribe.bind(account_no, (data) => {
           if (data?.status === true) {
             status = true;
             const result = data?.data;
@@ -1249,13 +1217,6 @@ function Pooler(config) {
     </svg>`;
     });
 
-    // setTimeout(() => {
-    //   copy.innerHTML = `<svg width="16" height="16" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-    // <path d="M4 14C3.06812 14 2.60218 14 2.23463 13.8478C1.74458 13.6448 1.35523 13.2554 1.15224 12.7654C1 12.3978 1 11.9319 1 11V4.2C1 3.0799 1 2.51984 1.21799 2.09202C1.40973 1.71569 1.71569 1.40973 2.09202 1.21799C2.51984 1 3.0799 1 4.2 1H11C11.9319 1 12.3978 1 12.7654 1.15224C13.2554 1.35523 13.6448 1.74458 13.8478 2.23463C14 2.60218 14 3.06812 14 4M11.2 21H17.8C18.9201 21 19.4802 21 19.908 20.782C20.2843 20.5903 20.5903 20.2843 20.782 19.908C21 19.4802 21 18.9201 21 17.8V11.2C21 10.0799 21 9.51984 20.782 9.09202C20.5903 8.7157 20.2843 8.40973 19.908 8.21799C19.4802 8 18.9201 8 17.8 8H11.2C10.0799 8 9.51984 8 9.09202 8.21799C8.7157 8.40973 8.40973 8.7157 8.21799 9.09202C8 9.51984 8 10.0799 8 11.2V17.8C8 18.9201 8 19.4802 8.21799 19.908C8.40973 20.2843 8.7157 20.5903 9.09202 20.782C9.51984 21 10.0799 21 11.2 21Z" stroke="#CBD1EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    // </svg>
-    // `;
-    // }, 3000);
-
     accDetails.appendChild(copy);
     li2.appendChild(accNum);
     li2.appendChild(accDetails);
@@ -1375,81 +1336,6 @@ function Pooler(config) {
       var iframeWindow = awaitingIframe.contentWindow;
       iframeWindow.document.head.appendChild(style);
       iframeWindow.document.body.appendChild(Awaitingmodal);
-
-      // LOAD PUSHER SCRIPT DYNAMICALLY AND ADD TO  DOM
-      //   const script = document.createElement("script");
-      //   script.src = "https://js.pusher.com/8.2.0/pusher.min.js";
-      //   script.async = true;
-      //   script.onload = function () {
-      //     console.log("SCRIPT CALL");
-      //     // INITIALISE PUSHER AND LISTEN TO TSQ CHANNEL FOR DATA
-      //     var PUSHER_TSQ_APP_KEY = "79e7b34f11d419e304e5";
-      //     var PUSHER_TSQ_CHANNEL_KEY = "tsq_dev";
-
-      //     const tsqSign = new Pusher(PUSHER_TSQ_APP_KEY, {
-      //       cluster: "mt1",
-      //     });
-      //     const tsqSubscribe = tsqSign.subscribe(PUSHER_TSQ_CHANNEL_KEY);
-
-      //     tsqSubscribe.bind("data", function (data) {
-      //       console.log("SECOND CALL");
-      //       console.log(data?.data, "from  tsq");
-      //       // Call the callback function with the updated data
-      //       if (data?.data !== "Pending") {
-      //         const tsqResponse = data?.data;
-      //         clearInterval(fetchDatInterval);
-      //         clearInterval(signatureInterval);
-      //         removeSubscription();
-      //         tsqSubscribe.unsubscribe(PUSHER_TSQ_CHANNEL_KEY);
-      //         tsqSubscribe.unbind();
-      //         successModal({
-      //           ...tsqResponse,
-      //           ...modalProps,
-      //         });
-      //         awaitingIframe.removeEventListener("load", handleIframeLoad);
-      //         awaitingIframe.style.display = "none";
-      //         Awaitingmodal.style.display = "none";
-      //         var childNodes = document.body.childNodes;
-      //         var desiredChild = null;
-      //         for (var i = 0; i < childNodes.length; i++) {
-      //           if (
-      //             childNodes[i].id === "pooler-iframe" ||
-      //             childNodes[i].id === "merchant-iframe"
-      //           ) {
-      //             desiredChild = childNodes[i];
-      //             break;
-      //           }
-      //         }
-      //         if (desiredChild) {
-      //           var parent = desiredChild.parentNode;
-      //           parent.removeChild(desiredChild);
-      //         }
-      //       } else {
-      //         removeSubscription();
-      //         tsqSubscribe.unsubscribe(PUSHER_TSQ_CHANNEL_KEY);
-      //         tsqSubscribe.unbind();
-      //         onFailure({ ...modalProps });
-      //         awaitingIframe.removeEventListener("load", handleIframeLoad);
-      //         awaitingIframe.style.display = "none";
-      //         var childNodes = document.body.childNodes;
-      //         var desiredChild = null;
-      //         for (var i = 0; i < childNodes.length; i++) {
-      //           if (
-      //             childNodes[i].id === "pooler-iframe" ||
-      //             childNodes[i].id === "merchant-iframe"
-      //           ) {
-      //             desiredChild = childNodes[i];
-      //             break;
-      //           }
-      //         }
-      //         if (desiredChild) {
-      //           var parent = desiredChild.parentNode;
-      //           parent.removeChild(desiredChild);
-      //         }
-      //       }
-      //     });
-      //   };
-      //   document.head.appendChild(script);
     }
     awaitingIframe.addEventListener("load", handleIframeLoad);
     document.body.appendChild(awaitingIframe);
@@ -1536,18 +1422,6 @@ function Pooler(config) {
       awaitingIframe.parentNode.removeChild(awaitingIframe);
       Awaitingmodal.style.display = "none";
       overlay.style.display = "none";
-      //   var childNodes = document.body.childNodes;
-      //   var desiredChild = null;
-      // for (var i = 0; i < childNodes.length; i++) {
-      //   if (childNodes[i].id === "awaiting-iframe") {
-      //     desiredChild = childNodes[i];
-      //     break;
-      //   }
-      // }
-      // if (desiredChild) {
-      //   var parent = desiredChild.parentNode;
-      //   parent.removeChild(desiredChild);
-      // }
     });
 
     function handleMerchantEffect() {
@@ -1802,7 +1676,6 @@ function Pooler(config) {
     // document.body.appendChild(modal);
 
     const successData = data;
-    console.log(successData, "success data");
 
     function handleIframe() {
       var iframeWindow = successIframe.contentWindow;
@@ -1831,16 +1704,24 @@ function Pooler(config) {
           pusherSignSubscribe.unsubscribe(PUSHER_SIGN_CHANNEL_KEY);
           pusherSignSubscribe.unbind();
         };
+        const generateUniqueId = () => {
+          const timestamp = Date.now();
+          const random = Math.random().toString(36).substring(2);
+          return `${timestamp}${random}`;
+        };
+        const event_name = generateUniqueId();
 
         const fetchData = () => {
-          fetch(`${BASE_URL}/initialize`, { method: "GET" });
+          fetch(`${BASE_URL}/initialize?event_name=${event_name}`, {
+            method: "GET",
+          });
         };
         const fetchDataInterval = setInterval(() => {
           fetchData();
         }, 3000);
 
         function getSignature(callback) {
-          pusherSignSubscribe.bind("data", function (data) {
+          pusherSignSubscribe.bind(event_name, function (data) {
             if (data?.data?.signature) {
               callback(data?.data?.signature);
             }
@@ -1854,6 +1735,7 @@ function Pooler(config) {
               signature: signature,
               account_no: successData?.data?.account_no,
               pub_key: successData?.merchantConfig?.pub_key,
+              event_name,
             };
 
             fetch(`${BASE_URL}/socket`, {
@@ -1872,7 +1754,7 @@ function Pooler(config) {
               PUSHER_EXPIRE_CHANNEL_KEY
             );
 
-            expireSignSubscribe.bind("data", (data) => {
+            expireSignSubscribe.bind(event_name, (data) => {
               if (data?.status === true) {
                 window.location.replace(
                   successData?.merchantConfig?.redirect_link
@@ -1966,7 +1848,6 @@ function Pooler(config) {
       if (desiredChild) {
         var parent = desiredChild.parentNode;
         parent.removeChild(desiredChild);
-        console.log("yeah");
       }
     });
   }
@@ -2327,7 +2208,6 @@ function Pooler(config) {
       script.src = "https://js.pusher.com/8.2.0/pusher.min.js";
       script.defer = true;
       script.onload = function () {
-        console.log("script call");
         const BASE_URL = "https://websocket.inside.poolerapp.com";
         const PUSHER_SIGN_APP_KEY = "f5715eb30d0b1b069d22";
         const PUSHER_SIGN_CHANNEL_KEY = "signature_dev";
@@ -2346,8 +2226,18 @@ function Pooler(config) {
           pusherSignSubscribe.unbind();
         };
 
+        const generateUniqueId = () => {
+          const timestamp = Date.now();
+          const random = Math.random().toString(36).substring(2);
+          return `${timestamp}${random}`;
+        };
+        const event_name = generateUniqueId();
+
         const fetchData = () => {
-          fetch(`${BASE_URL}/initialize`, { method: "GET", signal })
+          fetch(`${BASE_URL}/initialize?event_name=${event_name}`, {
+            method: "GET",
+            signal,
+          })
             .then()
             .catch();
         };
@@ -2357,7 +2247,7 @@ function Pooler(config) {
         }, 3000);
 
         function getSignature(callback) {
-          pusherSignSubscribe.bind("data", function (data) {
+          pusherSignSubscribe.bind(event_name, function (data) {
             if (data?.data?.signature) {
               callback(data?.data?.signature);
             }
@@ -2371,6 +2261,7 @@ function Pooler(config) {
               email: sessionData?.merchantConfig?.email,
               amount: sessionData?.merchantConfig?.amount,
               pub_key: sessionData?.merchantConfig?.pub_key,
+              event_name,
               // payment_link_reference: config?.reference,
             };
 
@@ -2402,7 +2293,7 @@ function Pooler(config) {
             }
             const showMerchantModalOnce = executeOnce(showMerchantModal);
 
-            pusherPaymentSubscribe.bind("data", (data) => {
+            pusherPaymentSubscribe.bind(event_name, (data) => {
               if (data?.status === true) {
                 clearInterval(fetchDataInterval);
                 clearInterval(initiatePaymentInterval);
